@@ -1,0 +1,30 @@
+{
+  "project_info": {
+    "project_number": "1079515163248",
+    "firebase_url": "https://petfeeder-ed109-default-rtdb.asia-southeast1.firebasedatabase.app",
+    "project_id": "petfeeder-ed109",
+    "storage_bucket": "petfeeder-ed109.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1079515163248:android:1921c4596130afcdc0e2b5",
+        "android_client_info": {
+          "package_name": "com.iotprojects2.petfeeder"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCze22I9IUPEbJNXhTqvr8019iGELRJVig"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
