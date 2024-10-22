@@ -1,5 +1,5 @@
-import React, { useEffect, useState } from 'react';
-import { Image, StyleSheet, Platform, Alert, Text, TouchableOpacity } from 'react-native';
+import React, { useEffect, useRef, useState } from 'react';
+import { Image, StyleSheet, Platform, Alert, Text, TouchableOpacity, View, Animated } from 'react-native';
 import messaging from '@react-native-firebase/messaging';
 import { PermissionsAndroid } from 'react-native';
 import { firebaseDatabase } from '../../firebase/firebase';
@@ -7,9 +7,29 @@ import { HelloWave } from '@/components/HelloWave';
 import ParallaxScrollView from '@/components/ParallaxScrollView';
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
+import { FeedbackMessage } from '@/components/FeedbackMessage';
 
-export default function HomeScreen() {
+export default function ManualFeeding() {
+  type FeedbackType = 'success' | 'failure';
+
   const [fcmToken, setFcmToken] = useState<string | null>(null);
+  const [feedback, setFeedback] = useState<{ message: string; type: FeedbackType }>({
+    message: '',
+    type: 'success', 
+  });  
+
+  useEffect(() => {
+    const setExistingToken = async () => {
+      const snapshot = await firebaseDatabase.ref('/deviceInfo/fcmToken').once('value');
+      const data: string | null = snapshot.val() || null; 
+
+      if (data){
+        setFcmToken(data);
+      }
+    };
+  
+    setExistingToken();
+  }, []);
 
   useEffect(() => {
     const requestUserPermission = async () => {
@@ -31,11 +51,16 @@ export default function HomeScreen() {
       }
     };
 
+    const upsertFCMToken = async (fcmToken : string) => {
+      await firebaseDatabase.ref(`deviceInfo/fcmToken`).set(fcmToken);
+    }
+
     const getFCMToken = async () => {
       const token = await messaging().getToken();
 
       if (token !== fcmToken) {
         setFcmToken(token);
+        upsertFCMToken(token);
       }
 
       console.log('FCM Token:', token);
@@ -90,18 +115,16 @@ export default function HomeScreen() {
   const dispenseFood = async () => {
     try {
       const dispenseRef = firebaseDatabase.ref('/commands/dispense');
-
-      const snapshot = await dispenseRef.once('value');
-      if (snapshot.exists()) {
-        const currentValue = snapshot.val();
-        console.log('Current value of /commands/dispense:', currentValue);
-      } else {
-        console.log('No data available at /commands/dispense');
-      }
-      
+      await dispenseRef.set(true);
+      setFeedback({ message: 'Successfully dispensed food', type: 'success' }); 
     } catch (error) {
-      console.error('Error fetching data:', error);
+      console.error('Error dispensing food:', error);
+      setFeedback({ message: 'Failed to dispense food', type: 'failure' }); 
     }
+  };
+
+  const clearFeedback = () => {
+    setFeedback({ message: '', type: 'success' });
   };
 
   return (
@@ -114,7 +137,7 @@ export default function HomeScreen() {
         />
       }>
       <ThemedView style={styles.titleContainer}>
-        <ThemedText type="title">Control Panel</ThemedText>
+        <ThemedText type="title">Manual Feeding</ThemedText>
         <HelloWave />
       </ThemedView>
 
@@ -130,22 +153,24 @@ export default function HomeScreen() {
       </ThemedView>
       <ThemedView style={styles.buttonContainer}>
         <TouchableOpacity style={styles.button} onPress={dispenseFood}>
-          <ThemedText type="default">Print</ThemedText>
+          <ThemedText type="default">Dispense Food</ThemedText>
         </TouchableOpacity>
       </ThemedView>
-      <ThemedView style={styles.buttonContainer}>
-        <TouchableOpacity style={styles.button} onPress={() => { console.log('test')} }>
-          <ThemedText type="default">Just Print</ThemedText>
-        </TouchableOpacity>
-      </ThemedView>  
     
-      
       <ThemedView style={styles.tokenContainer}>
         <ThemedText type="subtitle">FCM Token:</ThemedText>
         <Text style={styles.tokenText}>
           {fcmToken ? fcmToken : 'Fetching FCM token...'}
         </Text>
       </ThemedView>
+      
+      {feedback.message !== '' && (
+        <FeedbackMessage 
+          message={feedback.message} 
+          type={feedback.type} 
+          onAnimationEnd={clearFeedback}
+        />
+      )}
     </ParallaxScrollView>
   );
 }
@@ -184,5 +209,5 @@ const styles = StyleSheet.create({
     color: 'white',
     fontSize: 12,
     fontFamily: 'monospace',
-  },
+  }
 });
