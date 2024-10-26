@@ -33,6 +33,15 @@ export default function TabLayout() {
           ),
         }}
       />
+      <Tabs.Screen
+        name="stream-feed"
+        options={{
+          title: 'Stream Feed',
+          tabBarIcon: ({ color, focused }) => (
+            <TabBarIcon name={focused ? 'videocam' : 'videocam-outline'} color={color} />
+          ),
+        }}
+      />
     </Tabs>
   );
 }
