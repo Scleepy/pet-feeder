@@ -12,6 +12,7 @@ interface FeedTime {
   feedTimeId: string | number[];
   time: string; 
   isActive: boolean;
+  lastTriggerDate: String;
 }
 
 export default function FeedingTime() {
@@ -30,6 +31,7 @@ export default function FeedingTime() {
         feedTimeId: entry.feedTimeId,
         time: entry.time,
         isActive: entry.isActive,
+        lastTriggerDate: entry.lastTriggerDate,
       })));
     };
   
@@ -51,6 +53,7 @@ export default function FeedingTime() {
         feedTimeId: uuid.v4(),
         time: selectedDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false }),
         isActive: true,
+        lastTriggerDate: '1970-01-01'
       };
 
       setFeedTimes((prev) => [...prev, newFeedTime]);
