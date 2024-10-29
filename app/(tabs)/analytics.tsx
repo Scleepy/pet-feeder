@@ -5,10 +5,9 @@ import { firebaseDatabase } from "@/firebase/firebase";
 import { Ionicons } from "@expo/vector-icons";
 import React, { useEffect, useState } from "react";
 import { StyleSheet, View, ScrollView, TouchableOpacity } from "react-native";
-import uuid from "react-native-uuid";
 
 interface DailyGrams {
-  feedTimeId: string | number[];
+  feedTimeId: string;
   date: string;
   value: number;
 }
@@ -16,55 +15,12 @@ interface DailyGrams {
 export default function Analytics() {
   const [showDailyData, setShowDailyData] = useState(true);
   const [dailyGrams, setDailyGrams] = useState<DailyGrams[]>([]);
+  const [todayGrams, setTodayGrams] = useState<DailyGrams[]>([]);
   const [averageGramsPerWeek, setAverageGramsPerWeek] = useState(0);
-  const [dispenseCommand, setDispenseCommand] = useState(false);
-  const [totalGrams, setTotalGrams] = useState(0);
 
   useEffect(() => {
-    const commandsRef = firebaseDatabase.ref("commands");
-
-    const onValueChange = commandsRef.on("value", (snapshot) => {
-      const data = snapshot.val();
-      if (data && data.dispense) {
-        setDispenseCommand(data.dispense);
-      }
-    });
-
-    return () => {
-      commandsRef.off("value", onValueChange);
-    };
-  }, []);
-
-  useEffect(() => {
-    if (dispenseCommand) {
-      handleDispense();
-    }
-  }, [dispenseCommand]); // Runs handleDispense whenever dispenseCommand changes
-
-  const handleDispense = async () => {
-    const now = new Date();
-
-    const formattedDate = `${(now.getMonth() + 1)
-      .toString()
-      .padStart(2, "0")}/${now
-      .getDate()
-      .toString()
-      .padStart(2, "0")}/${now.getFullYear()} - ${now
-      .getHours()
-      .toString()
-      .padStart(2, "0")}:${now.getMinutes().toString().padStart(2, "0")}`;
-
-    const newDailyGram: DailyGrams = {
-      feedTimeId: uuid.v4(),
-      date: formattedDate,
-      value: 150,
-    };
-
-    await firebaseDatabase
-      .ref(`/feedingData/dailyGrams/${newDailyGram.feedTimeId}`)
-      .set(newDailyGram);
     fetchDailyGrams();
-  };
+  }, []);
 
   const fetchDailyGrams = async () => {
     const snapshot = await firebaseDatabase
@@ -81,6 +37,16 @@ export default function Analytics() {
 
     setDailyGrams(gramsData);
     calculateAverage(gramsData);
+
+    const todayDate = new Date();
+    const formattedDate = `${(todayDate.getMonth() + 1)
+      .toString()
+      .padStart(2, "0")}/${todayDate.getDate().toString()}`;
+
+    const filteredTodayGrams = gramsData.filter((gram) =>
+      gram.date.includes(formattedDate)
+    );
+    setTodayGrams(filteredTodayGrams);
   };
 
   const calculateAverage = async (gramsData: DailyGrams[]) => {
@@ -92,7 +58,6 @@ export default function Analytics() {
     const totalGrams = gramsData.reduce((sum, entry) => sum + entry.value, 0);
     const average = totalGrams / gramsData.length;
 
-    setTotalGrams(totalGrams);
     setAverageGramsPerWeek(average);
     await updateAverageInDatabase(average);
   };
@@ -135,8 +100,8 @@ export default function Analytics() {
                   </ThemedText>
                 </ThemedText>
                 <View style={styles.dataEntries}>
-                  {dailyGrams.map((gram) => (
-                    <View style={styles.dataEntry}>
+                  {todayGrams.map((gram) => (
+                    <View key={gram?.feedTimeId} style={styles.dataEntry}>
                       <ThemedText
                         style={{ color: "#000" }}
                       >{`${gram.date}: ${gram.value}gr`}</ThemedText>

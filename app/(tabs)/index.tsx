@@ -1,47 +1,73 @@
-import React, { useEffect, useRef, useState } from 'react';
-import { Image, StyleSheet, Platform, Alert, Text, TouchableOpacity, View, Animated } from 'react-native';
-import messaging from '@react-native-firebase/messaging';
-import { PermissionsAndroid } from 'react-native';
-import { firebaseDatabase } from '../../firebase/firebase';
-import { HelloWave } from '@/components/HelloWave';
-import ParallaxScrollView from '@/components/ParallaxScrollView';
-import { ThemedText } from '@/components/ThemedText';
-import { ThemedView } from '@/components/ThemedView';
-import { FeedbackMessage } from '@/components/FeedbackMessage';
+import React, { useEffect, useRef, useState } from "react";
+import {
+  Image,
+  StyleSheet,
+  Platform,
+  Alert,
+  Text,
+  TouchableOpacity,
+  View,
+  Animated,
+} from "react-native";
+import messaging from "@react-native-firebase/messaging";
+import { PermissionsAndroid } from "react-native";
+import { firebaseDatabase } from "../../firebase/firebase";
+import { HelloWave } from "@/components/HelloWave";
+import ParallaxScrollView from "@/components/ParallaxScrollView";
+import { ThemedText } from "@/components/ThemedText";
+import { ThemedView } from "@/components/ThemedView";
+import { FeedbackMessage } from "@/components/FeedbackMessage";
+import uuid from "react-native-uuid";
+
+interface DailyGrams {
+  feedTimeId: string | number[];
+  date: string;
+  value: number;
+}
 
 export default function ManualFeeding() {
-  type FeedbackType = 'success' | 'failure';
+  type FeedbackType = "success" | "failure";
 
   const [fcmToken, setFcmToken] = useState<string | null>(null);
-  const [feedback, setFeedback] = useState<{ message: string; type: FeedbackType }>({
-    message: '',
-    type: 'success', 
-  });  
+  const [feedback, setFeedback] = useState<{
+    message: string;
+    type: FeedbackType;
+  }>({
+    message: "",
+    type: "success",
+  });
 
   useEffect(() => {
     const setExistingToken = async () => {
-      const snapshot = await firebaseDatabase.ref('/deviceInfo/fcmToken').once('value');
-      const data: string | null = snapshot.val() || null; 
+      const snapshot = await firebaseDatabase
+        .ref("/deviceInfo/fcmToken")
+        .once("value");
+      const data: string | null = snapshot.val() || null;
 
-      if (data){
+      if (data) {
         setFcmToken(data);
       }
     };
-  
+
     setExistingToken();
   }, []);
 
   useEffect(() => {
     const requestUserPermission = async () => {
-      if (Platform.OS === 'android' && Platform.Version >= 33) {
+      if (Platform.OS === "android" && Platform.Version >= 33) {
         try {
-          const granted = await PermissionsAndroid.request(PermissionsAndroid.PERMISSIONS.POST_NOTIFICATIONS);
+          const granted = await PermissionsAndroid.request(
+            PermissionsAndroid.PERMISSIONS.POST_NOTIFICATIONS
+          );
 
           if (granted === PermissionsAndroid.RESULTS.GRANTED) {
             console.log("You can use the notifications");
             getFCMToken();
           } else {
-            Alert.alert('Permission denied', 'You need to enable notifications for this app.');
+            Alert.alert(
+              "Permission denied",
+              "You need to enable notifications for this app."
+            );
           }
         } catch (err) {
           console.warn(err);
@@ -51,9 +77,9 @@ export default function ManualFeeding() {
       }
     };
 
-    const upsertFCMToken = async (fcmToken : string) => {
+    const upsertFCMToken = async (fcmToken: string) => {
       await firebaseDatabase.ref(`deviceInfo/fcmToken`).set(fcmToken);
-    }
+    };
 
     const getFCMToken = async () => {
       const token = await messaging().getToken();
@@ -63,26 +89,33 @@ export default function ManualFeeding() {
         upsertFCMToken(token);
       }
 
-      console.log('FCM Token:', token);
+      console.log("FCM Token:", token);
     };
 
-    const unsubscribe = messaging().onMessage(async remoteMessage => {
-      Alert.alert('A new FCM message arrived!', JSON.stringify(remoteMessage));
+    const unsubscribe = messaging().onMessage(async (remoteMessage) => {
+      Alert.alert("A new FCM message arrived!", JSON.stringify(remoteMessage));
     });
 
-    messaging().setBackgroundMessageHandler(async remoteMessage => {
-      console.log('Message handled in the background!', remoteMessage);
+    messaging().setBackgroundMessageHandler(async (remoteMessage) => {
+      console.log("Message handled in the background!", remoteMessage);
     });
 
-    const unsubscribeOnNotificationOpenedApp = messaging().onNotificationOpenedApp(remoteMessage => {
-      console.log('Notification caused app to open from background state:', remoteMessage);
-    });
+    const unsubscribeOnNotificationOpenedApp =
+      messaging().onNotificationOpenedApp((remoteMessage) => {
+        console.log(
+          "Notification caused app to open from background state:",
+          remoteMessage
+        );
+      });
 
     messaging()
       .getInitialNotification()
-      .then(remoteMessage => {
+      .then((remoteMessage) => {
         if (remoteMessage) {
-          console.log('Notification caused app to open from quit state:', remoteMessage);
+          console.log(
+            "Notification caused app to open from quit state:",
+            remoteMessage
+          );
         }
       });
 
@@ -96,46 +129,70 @@ export default function ManualFeeding() {
 
   const setTrue = async () => {
     try {
-      const dispenseRef = firebaseDatabase.ref('/commands/dispense');
+      const dispenseRef = firebaseDatabase.ref("/commands/dispense");
       await dispenseRef.set(true);
     } catch (error) {
-      console.error('Error writing data:', error);
+      console.error("Error writing data:", error);
     }
   };
 
   const setFalse = async () => {
     try {
-      const dispenseRef = firebaseDatabase.ref('/commands/dispense');
+      const dispenseRef = firebaseDatabase.ref("/commands/dispense");
       await dispenseRef.set(false);
     } catch (error) {
-      console.error('Error writing data:', error);
+      console.error("Error writing data:", error);
     }
   };
 
   const dispenseFood = async () => {
     try {
-      const dispenseRef = firebaseDatabase.ref('/commands/dispense');
+      const dispenseRef = firebaseDatabase.ref("/commands/dispense");
       await dispenseRef.set(true);
-      setFeedback({ message: 'Successfully dispensed food', type: 'success' }); 
+
+      const now = new Date();
+
+      const formattedDate = `${(now.getMonth() + 1)
+        .toString()
+        .padStart(2, "0")}/${now
+        .getDate()
+        .toString()
+        .padStart(2, "0")}/${now.getFullYear()} - ${now
+        .getHours()
+        .toString()
+        .padStart(2, "0")}:${now.getMinutes().toString().padStart(2, "0")}`;
+
+      const newDailyGram: DailyGrams = {
+        feedTimeId: uuid.v4(),
+        date: formattedDate,
+        value: 150,
+      };
+
+      await firebaseDatabase
+        .ref(`/feedingData/dailyGrams/${newDailyGram.feedTimeId}`)
+        .set(newDailyGram);
+
+      setFeedback({ message: "Successfully dispensed food", type: "success" });
     } catch (error) {
-      console.error('Error dispensing food:', error);
-      setFeedback({ message: 'Failed to dispense food', type: 'failure' }); 
+      console.error("Error dispensing food:", error);
+      setFeedback({ message: "Failed to dispense food", type: "failure" });
     }
   };
 
   const clearFeedback = () => {
-    setFeedback({ message: '', type: 'success' });
+    setFeedback({ message: "", type: "success" });
   };
 
   return (
     <ParallaxScrollView
-      headerBackgroundColor={{ light: '#A1CEDC', dark: '#1D3D47' }}
+      headerBackgroundColor={{ light: "#A1CEDC", dark: "#1D3D47" }}
       headerImage={
         <Image
-          source={require('@/assets/images/partial-react-logo.png')}
+          source={require("@/assets/images/partial-react-logo.png")}
           style={styles.reactLogo}
         />
-      }>
+      }
+    >
       <ThemedView style={styles.titleContainer}>
         <ThemedText type="title">Manual Feeding</ThemedText>
         <HelloWave />
@@ -156,18 +213,18 @@ export default function ManualFeeding() {
           <ThemedText type="default">Dispense Food</ThemedText>
         </TouchableOpacity>
       </ThemedView>
-    
+
       <ThemedView style={styles.tokenContainer}>
         <ThemedText type="subtitle">FCM Token:</ThemedText>
         <Text style={styles.tokenText}>
-          {fcmToken ? fcmToken : 'Fetching FCM token...'}
+          {fcmToken ? fcmToken : "Fetching FCM token..."}
         </Text>
       </ThemedView>
-      
-      {feedback.message !== '' && (
-        <FeedbackMessage 
-          message={feedback.message} 
-          type={feedback.type} 
+
+      {feedback.message !== "" && (
+        <FeedbackMessage
+          message={feedback.message}
+          type={feedback.type}
           onAnimationEnd={clearFeedback}
         />
       )}
@@ -177,16 +234,16 @@ export default function ManualFeeding() {
 
 const styles = StyleSheet.create({
   titleContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 8,
   },
   buttonContainer: {
     marginVertical: 20,
-    alignItems: 'center',
+    alignItems: "center",
   },
   button: {
-    backgroundColor: '#4CAF50',
+    backgroundColor: "#4CAF50",
     padding: 15,
     borderRadius: 5,
   },
@@ -199,15 +256,15 @@ const styles = StyleSheet.create({
     width: 290,
     bottom: 0,
     left: 0,
-    position: 'absolute',
+    position: "absolute",
   },
   tokenContainer: {
     padding: 16,
     marginTop: 20,
   },
   tokenText: {
-    color: 'white',
+    color: "white",
     fontSize: 12,
-    fontFamily: 'monospace',
-  }
+    fontFamily: "monospace",
+  },
 });
