@@ -25,6 +25,13 @@ interface DailyGrams {
   value: number;
 }
 
+interface PetFeedingHistory {
+  petFeedingHistoryId: string | number[];
+  feedTimeId: string | number[] | null;
+  petId: (string | number[])[] | [];
+  feedTypeName: "Manual" | "Schedule" | "Manual RFID" | "Schedule RFID";
+}
+
 export default function ManualFeeding() {
   type FeedbackType = "success" | "failure";
 
@@ -183,6 +190,30 @@ export default function ManualFeeding() {
     setFeedback({ message: "", type: "success" });
   };
 
+  const rfidDispenseFood = async () => {
+    try {
+      const activeRFIDFeedingId = uuid.v4();
+
+      const dispenseRef = firebaseDatabase.ref('/commands/activeRFIDFeedingId');
+      await dispenseRef.set(activeRFIDFeedingId);
+
+      const newPetFeedingHistoryData: PetFeedingHistory = {
+        petFeedingHistoryId: activeRFIDFeedingId,
+        feedTimeId: null,
+        petId: [],
+        feedTypeName: "Manual RFID",
+      };
+
+      await firebaseDatabase.ref(`/petFeedingHistory/${newPetFeedingHistoryData.petFeedingHistoryId}`).set(newPetFeedingHistoryData);
+
+      setFeedback({ message: 'Successfully dispensed food', type: 'success' }); 
+    } catch (error) {
+      console.error('Error dispensing food:', error);
+      setFeedback({ message: 'Failed to dispense food', type: 'failure' }); 
+    }
+  };
+
+
   return (
     <ParallaxScrollView
       headerBackgroundColor={{ light: "#A1CEDC", dark: "#1D3D47" }}
@@ -199,20 +230,17 @@ export default function ManualFeeding() {
       </ThemedView>
 
       <ThemedView style={styles.buttonContainer}>
-        <TouchableOpacity style={styles.button} onPress={setTrue}>
-          <ThemedText type="default">Set True</ThemedText>
-        </TouchableOpacity>
-      </ThemedView>
-      <ThemedView style={styles.buttonContainer}>
-        <TouchableOpacity style={styles.button} onPress={setFalse}>
-          <ThemedText type="default">Set False</ThemedText>
-        </TouchableOpacity>
-      </ThemedView>
-      <ThemedView style={styles.buttonContainer}>
         <TouchableOpacity style={styles.button} onPress={dispenseFood}>
           <ThemedText type="default">Dispense Food</ThemedText>
         </TouchableOpacity>
       </ThemedView>
+
+      <ThemedView style={styles.buttonContainer}>
+        <TouchableOpacity style={styles.button} onPress={rfidDispenseFood}>
+          <ThemedText type="default">Manual RFID Feeding</ThemedText>
+        </TouchableOpacity>
+      </ThemedView>
+
 
       <ThemedView style={styles.tokenContainer}>
         <ThemedText type="subtitle">FCM Token:</ThemedText>
