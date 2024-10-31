@@ -100,13 +100,21 @@ export default function Analytics() {
                   </ThemedText>
                 </ThemedText>
                 <View style={styles.dataEntries}>
-                  {todayGrams.map((gram) => (
-                    <View key={gram?.feedTimeId} style={styles.dataEntry}>
-                      <ThemedText
-                        style={{ color: "#000" }}
-                      >{`${gram.date}: ${gram.value}gr`}</ThemedText>
-                    </View>
-                  ))}
+                  {todayGrams.length > 0 ? (
+                    <>
+                      {todayGrams.map((gram) => (
+                        <View key={gram?.feedTimeId} style={styles.dataEntry}>
+                          <ThemedText
+                            style={{ color: "#000" }}
+                          >{`${gram.date}: ${gram.value}gr`}</ThemedText>
+                        </View>
+                      ))}
+                    </>
+                  ) : (
+                    <ThemedText style={styles.dataText}>
+                      You haven't fed your pet today
+                    </ThemedText>
+                  )}
                 </View>
               </View>
             </>

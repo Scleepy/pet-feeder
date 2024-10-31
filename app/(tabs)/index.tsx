@@ -134,24 +134,6 @@ export default function ManualFeeding() {
     };
   }, [fcmToken]);
 
-  const setTrue = async () => {
-    try {
-      const dispenseRef = firebaseDatabase.ref("/commands/dispense");
-      await dispenseRef.set(true);
-    } catch (error) {
-      console.error("Error writing data:", error);
-    }
-  };
-
-  const setFalse = async () => {
-    try {
-      const dispenseRef = firebaseDatabase.ref("/commands/dispense");
-      await dispenseRef.set(false);
-    } catch (error) {
-      console.error("Error writing data:", error);
-    }
-  };
-
   const dispenseFood = async () => {
     try {
       const dispenseRef = firebaseDatabase.ref("/commands/dispense");
@@ -194,7 +176,7 @@ export default function ManualFeeding() {
     try {
       const activeRFIDFeedingId = uuid.v4();
 
-      const dispenseRef = firebaseDatabase.ref('/commands/activeRFIDFeedingId');
+      const dispenseRef = firebaseDatabase.ref("/commands/activeRFIDFeedingId");
       await dispenseRef.set(activeRFIDFeedingId);
 
       const newPetFeedingHistoryData: PetFeedingHistory = {
@@ -204,15 +186,18 @@ export default function ManualFeeding() {
         feedTypeName: "Manual RFID",
       };
 
-      await firebaseDatabase.ref(`/petFeedingHistory/${newPetFeedingHistoryData.petFeedingHistoryId}`).set(newPetFeedingHistoryData);
+      await firebaseDatabase
+        .ref(
+          `/petFeedingHistory/${newPetFeedingHistoryData.petFeedingHistoryId}`
+        )
+        .set(newPetFeedingHistoryData);
 
-      setFeedback({ message: 'Successfully dispensed food', type: 'success' }); 
+      setFeedback({ message: "Successfully dispensed food", type: "success" });
     } catch (error) {
-      console.error('Error dispensing food:', error);
-      setFeedback({ message: 'Failed to dispense food', type: 'failure' }); 
+      console.error("Error dispensing food:", error);
+      setFeedback({ message: "Failed to dispense food", type: "failure" });
     }
   };
-
 
   return (
     <ParallaxScrollView
@@ -240,7 +225,6 @@ export default function ManualFeeding() {
           <ThemedText type="default">Manual RFID Feeding</ThemedText>
         </TouchableOpacity>
       </ThemedView>
-
 
       <ThemedView style={styles.tokenContainer}>
         <ThemedText type="subtitle">FCM Token:</ThemedText>
