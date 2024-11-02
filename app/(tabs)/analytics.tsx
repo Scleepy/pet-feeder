@@ -17,11 +17,34 @@ export default function Analytics() {
   const [dailyGrams, setDailyGrams] = useState<DailyGrams[]>([]);
   const [todayGrams, setTodayGrams] = useState<DailyGrams[]>([]);
   const [dailyAverage, setDailyAverage] = useState<number>(0);
+  const [currentFoodLevel, setCurrentFoodLevel] = useState<string>("0%");
   const [weeklyAverages, setWeeklyAverages] = useState<string[]>([]);
 
   useEffect(() => {
-    fetchDailyGrams();
+    fetchData();
   }, []);
+
+  const fetchData = () => {
+    fetchCurrentFoodLevel();
+    fetchDailyGrams();
+  }
+
+  const fetchCurrentFoodLevel = async () => {
+    try {
+      const snapshot = await firebaseDatabase.ref("/feedingData/foodLevel").once("value");
+      const data = snapshot.val();
+  
+      if (data !== null) {
+        setCurrentFoodLevel(data);
+      } else {
+        console.error("No data found for food level.");
+        setCurrentFoodLevel("0%");
+      }
+    } catch (error) {
+      console.error("Error fetching food level:", error);
+      setCurrentFoodLevel("0%");
+    }
+  };
 
   const fetchDailyGrams = async () => {
     const snapshot = await firebaseDatabase
@@ -36,17 +59,32 @@ export default function Analytics() {
       value: entry.value,
     }));
 
+    gramsData.sort((a, b) => {
+      const dateA = new Date(a.date.replace(" - ", "T"));
+      const dateB = new Date(b.date.replace(" - ", "T"));
+      return dateB.getTime() - dateA.getTime();
+  });
+
     setDailyGrams(gramsData);
     calculateAverage(gramsData);
 
     const todayDate = new Date();
-    const formattedDate = `${(todayDate.getMonth() + 1)
-      .toString()
-      .padStart(2, "0")}/${todayDate.getDate().toString().padStart(2, "0")}`;
-  
+    const formattedMonth = (todayDate.getMonth() + 1).toString().padStart(2, "0");
+    const formattedDay = todayDate.getDate(); 
+
+    const formattedDateWithZero = `${formattedMonth}/${formattedDay.toString().padStart(2, "0")}`;
+    const formattedDateWithoutZero = `${formattedMonth}/${formattedDay}`;
+
     const filteredTodayGrams = gramsData.filter((gram) =>
-      gram.date.includes(formattedDate)
+      gram.date.includes(formattedDateWithZero) || gram.date.includes(formattedDateWithoutZero)
     );
+
+    filteredTodayGrams.sort((a, b) => {
+      const timeA = a.date.split(" - ")[1]; 
+      const timeB = b.date.split(" - ")[1];
+      return timeB.localeCompare(timeA);
+    });
+
     setTodayGrams(filteredTodayGrams);
   };
 
@@ -153,6 +191,10 @@ export default function Analytics() {
 
         <ScrollView contentContainerStyle={styles.scrollContainer}>
           <ThemedText style={styles.sectionTitle}>
+            Current Food Level: {currentFoodLevel}
+          </ThemedText>
+
+          <ThemedText style={styles.sectionTitle}>
             {showDailyData ? "Daily Feeding Trends" : "Weekly Average"}
           </ThemedText>
 
@@ -218,7 +260,7 @@ export default function Analytics() {
         </ScrollView>
       </ParallaxScrollView>
 
-      <TouchableOpacity style={styles.floatingButton} onPress={fetchDailyGrams}>
+      <TouchableOpacity style={styles.floatingButton} onPress={fetchData}>
         <Ionicons name="sync-outline" size={30} color="white" />
       </TouchableOpacity>
     </ThemedView>
@@ -243,7 +285,6 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 22,
     fontWeight: "600",
-    color: "#FFF",
     marginVertical: 12,
   },
   card: {

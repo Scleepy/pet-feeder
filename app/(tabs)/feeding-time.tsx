@@ -25,13 +25,6 @@ interface FeedTime {
   isRFID: boolean;
 }
 
-interface PetFeedingHistory {
-  petFeedingHistoryId: string | number[];
-  feedTimeId: string | number[] | null;
-  petId: (string | number[])[] | [];
-  feedTypeName: "Manual" | "Schedule" | "Manual RFID" | "Schedule RFID";
-}
-
 export default function FeedingTime() {
   type FeedbackType = "success" | "failure";
 
@@ -39,7 +32,6 @@ export default function FeedingTime() {
   const [showPicker, setShowPicker] = useState(false);
   const [feedTimes, setFeedTimes] = useState<FeedTime[]>([]);
   const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
-  const [editingTime, setEditingTime] = useState<FeedTime | null>(null);
   const [feedback, setFeedback] = useState<{
     message: string;
     type: FeedbackType;
@@ -103,10 +95,6 @@ export default function FeedingTime() {
     hidePicker();
   };
 
-  const handleEdit = (item: FeedTime) => {
-    setEditingTime(item);
-  };
-
   const hidePicker = () => {
     setShowPicker(false);
     setSelectedIndex(null);
@@ -143,16 +131,6 @@ export default function FeedingTime() {
     updateFeedTime(updatedFeedTimes[index]);
   };
 
-  const handleToggleRFID = () => {
-    if (editingTime) {
-      const updatedEditingTime = {
-        ...editingTime,
-        isRFID: !editingTime.isRFID,
-      };
-      setEditingTime(updatedEditingTime);
-    }
-  };
-
   const insertFeedTime = async (feedTime: FeedTime) => {
     await firebaseDatabase
       .ref(`/feedTimes/${feedTime.feedTimeId}`)
@@ -171,43 +149,20 @@ export default function FeedingTime() {
     await firebaseDatabase.ref(`/feedTimes/${feedTimeIdToDelete}`).remove();
   };
 
-  const handleUpdate = async (index: number) => {
-    if (editingTime) {
-      try {
-        const activeRFIDFeedingId = uuid.v4();
-        const newPetFeedingHistoryData: PetFeedingHistory = {
-          petFeedingHistoryId: activeRFIDFeedingId,
-          feedTimeId: editingTime.feedTimeId,
-          petId: [],
-          feedTypeName: editingTime.isRFID ? "Schedule RFID" : "Schedule",
-        };
 
-        // await firebaseDatabase
-        //   .ref(
-        //     `/petFeedingHistory/${newPetFeedingHistoryData.petFeedingHistoryId}`
-        //   )
-        //   .set(newPetFeedingHistoryData);
+  const handleEditRFIDMode = async (feedTime: FeedTime) => {
+    const updatedIsRFID = !feedTime.isRFID;
 
-        const updatedFeedTimes = feedTimes.map((feedTime, i) =>
-          i === index ? { ...feedTime, isRFID: !feedTime.isRFID } : feedTime
-        );
-        setFeedTimes(updatedFeedTimes);
-        updateFeedTime(updatedFeedTimes[index]);
+    await firebaseDatabase
+      .ref(`/feedTimes/${feedTime.feedTimeId}/isRFID`)
+      .set(updatedIsRFID);
 
-        setFeedback({
-          message: "Successfully updated feeding time",
-          type: "success",
-        });
-        setEditingTime(null);
-      } catch (error) {
-        console.error("Error updating feeding time:", error);
-        setFeedback({
-          message: "Failed to update feeding time",
-          type: "failure",
-        });
-      }
-    }
-  };
+    const updatedFeedTimes = feedTimes.map((ft) =>
+      ft.feedTimeId === feedTime.feedTimeId ? { ...ft, isRFID: updatedIsRFID } : ft
+    );
+    
+    setFeedTimes(updatedFeedTimes);    
+  }
 
   const clearFeedback = () => {
     setFeedback({ message: "", type: "success" });
@@ -260,37 +215,13 @@ export default function FeedingTime() {
 
             <View>
               <TouchableOpacity
-                style={styles.updateButton}
-                onPress={() => handleEdit(feedTime)}
+                style={[styles.updateButton, feedTime.isRFID ? styles.rfidOn : styles.rfidOff]}
+                onPress={() => handleEditRFIDMode(feedTime)}
               >
-                <Text style={styles.buttonText}>Update</Text>
+                <Text style={styles.buttonText}>
+                  {feedTime.isRFID ? "RFID Mode On" : "RFID Mode Off"}
+                </Text>
               </TouchableOpacity>
-
-              {editingTime?.feedTimeId === feedTime.feedTimeId && (
-                <TouchableWithoutFeedback onPress={() => {}}>
-                  <View style={styles.modalBox}>
-                    <View style={styles.modal}>
-                      <Text style={styles.buttonText}>RFID</Text>
-                      <Switch
-                        value={editingTime.isRFID}
-                        onValueChange={handleToggleRFID}
-                      />
-                    </View>
-                    <TouchableOpacity
-                      style={styles.updateButton}
-                      onPress={() => handleUpdate(index)}
-                    >
-                      <Text style={styles.buttonText}>Save</Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity
-                      style={[styles.updateButton, styles.cancelButton]}
-                      onPress={() => setEditingTime(null)}
-                    >
-                      <Text style={styles.buttonText}>Cancel</Text>
-                    </TouchableOpacity>
-                  </View>
-                </TouchableWithoutFeedback>
-              )}
             </View>
           </TouchableOpacity>
         ))}
@@ -371,18 +302,6 @@ const styles = StyleSheet.create({
   toggleContainer: {
     marginLeft: 10,
   },
-  modalBox: {
-    borderColor: "#ffffff",
-    borderWidth: 1,
-    padding: 10,
-    marginTop: 10,
-    borderRadius: 5,
-  },
-  modal: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-  },
   updateButton: {
     backgroundColor: "#1E90FF",
     padding: 8,
@@ -394,8 +313,10 @@ const styles = StyleSheet.create({
     color: "#fff",
     fontWeight: "600",
   },
-  cancelButton: {
-    backgroundColor: "#FF5252",
-    marginTop: 4,
+  rfidOn: {
+    backgroundColor: "#4CAF50",
+  },
+  rfidOff: {
+    backgroundColor: "#F44336",
   },
 });

@@ -8,6 +8,7 @@ import {
   TouchableOpacity,
   View,
   Animated,
+  TextInput,
 } from "react-native";
 import messaging from "@react-native-firebase/messaging";
 import { PermissionsAndroid } from "react-native";
@@ -43,7 +44,8 @@ export default function ManualFeeding() {
     message: "",
     type: "success",
   });
-
+  const [grams, setGrams] = useState<string>("30");
+  
   useEffect(() => {
     const setExistingToken = async () => {
       const snapshot = await firebaseDatabase
@@ -136,32 +138,18 @@ export default function ManualFeeding() {
 
   const dispenseFood = async () => {
     try {
-      const dispenseRef = firebaseDatabase.ref("/commands/dispense");
-      await dispenseRef.set(true);
+      const gramsValue = parseInt(grams);
 
-      // const now = new Date();
+      if (gramsValue <= 10) {
+        setFeedback({ message: "Cannot dispense less than\n10 grams of food", type: "failure" });
+        return; 
+      }
 
-      // const formattedDate = `${(now.getMonth() + 1)
-      //   .toString()
-      //   .padStart(2, "0")}/${now
-      //   .getDate()
-      //   .toString()
-      //   .padStart(2, "0")}/${now.getFullYear()} - ${now
-      //   .getHours()
-      //   .toString()
-      //   .padStart(2, "0")}:${now.getMinutes().toString().padStart(2, "0")}`;
-
-      // const newDailyGram: DailyGrams = {
-      //   feedTimeId: uuid.v4(),
-      //   date: formattedDate,
-      //   value: 30,
-      // };
-
-      // await firebaseDatabase
-      //   .ref(`/feedingData/dailyGrams/${newDailyGram.feedTimeId}`)
-      //   .set(newDailyGram);
+      firebaseDatabase.ref("/commands/dispense").set(true);
+      firebaseDatabase.ref("/commands/manualFeedingValue").set(gramsValue);
 
       setFeedback({ message: "Successfully dispensed food", type: "success" });
+      setGrams("30");
     } catch (error) {
       console.error("Error dispensing food:", error);
       setFeedback({ message: "Failed to dispense food", type: "failure" });
@@ -214,6 +202,17 @@ export default function ManualFeeding() {
         <HelloWave />
       </ThemedView>
 
+      <ThemedView style={styles.inputContainer}>
+        <TextInput
+          style={styles.input}
+          placeholderTextColor="lightgray"
+          placeholder="Enter grams of food"
+          keyboardType="numeric"
+          value={grams}
+          onChangeText={setGrams}
+        />
+      </ThemedView>
+
       <ThemedView style={styles.buttonContainer}>
         <TouchableOpacity style={styles.button} onPress={dispenseFood}>
           <ThemedText type="default">Dispense Food</ThemedText>
@@ -250,6 +249,20 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 8,
   },
+  inputContainer: {
+    marginVertical: 20,
+    alignItems: "center",
+  },
+  input: {
+    height: 40,
+    borderColor: "white",
+    borderWidth: 1,
+    paddingHorizontal: 10,
+    borderRadius: 5,
+    width: "80%",
+    color: "white",
+    backgroundColor: "#2E2E2E",
+  },
   buttonContainer: {
     marginVertical: 20,
     alignItems: "center",
@@ -258,10 +271,6 @@ const styles = StyleSheet.create({
     backgroundColor: "#4CAF50",
     padding: 15,
     borderRadius: 5,
-  },
-  stepContainer: {
-    gap: 8,
-    marginBottom: 8,
   },
   reactLogo: {
     height: 178,
