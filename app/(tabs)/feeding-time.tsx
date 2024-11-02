@@ -153,8 +153,6 @@ export default function FeedingTime() {
     }
   };
 
-  console.log(editingTime);
-
   const insertFeedTime = async (feedTime: FeedTime) => {
     await firebaseDatabase
       .ref(`/feedTimes/${feedTime.feedTimeId}`)
@@ -184,11 +182,11 @@ export default function FeedingTime() {
           feedTypeName: editingTime.isRFID ? "Schedule RFID" : "Schedule",
         };
 
-        await firebaseDatabase
-          .ref(
-            `/petFeedingHistory/${newPetFeedingHistoryData.petFeedingHistoryId}`
-          )
-          .set(newPetFeedingHistoryData);
+        // await firebaseDatabase
+        //   .ref(
+        //     `/petFeedingHistory/${newPetFeedingHistoryData.petFeedingHistoryId}`
+        //   )
+        //   .set(newPetFeedingHistoryData);
 
         const updatedFeedTimes = feedTimes.map((feedTime, i) =>
           i === index ? { ...feedTime, isRFID: !feedTime.isRFID } : feedTime

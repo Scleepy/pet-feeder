@@ -16,7 +16,8 @@ export default function Analytics() {
   const [showDailyData, setShowDailyData] = useState(true);
   const [dailyGrams, setDailyGrams] = useState<DailyGrams[]>([]);
   const [todayGrams, setTodayGrams] = useState<DailyGrams[]>([]);
-  const [averageGramsPerWeek, setAverageGramsPerWeek] = useState(0);
+  const [dailyAverage, setDailyAverage] = useState<number>(0);
+  const [weeklyAverages, setWeeklyAverages] = useState<string[]>([]);
 
   useEffect(() => {
     fetchDailyGrams();
@@ -41,8 +42,8 @@ export default function Analytics() {
     const todayDate = new Date();
     const formattedDate = `${(todayDate.getMonth() + 1)
       .toString()
-      .padStart(2, "0")}/${todayDate.getDate().toString()}`;
-
+      .padStart(2, "0")}/${todayDate.getDate().toString().padStart(2, "0")}`;
+  
     const filteredTodayGrams = gramsData.filter((gram) =>
       gram.date.includes(formattedDate)
     );
@@ -51,20 +52,87 @@ export default function Analytics() {
 
   const calculateAverage = async (gramsData: DailyGrams[]) => {
     if (gramsData.length === 0) {
-      setAverageGramsPerWeek(0);
-      await updateAverageInDatabase(0);
+      setDailyAverage(0);
+      // await updateAverageInDatabase(0);
       return;
     }
-    const totalGrams = gramsData.reduce((sum, entry) => sum + entry.value, 0);
-    const average = totalGrams / gramsData.length;
 
-    setAverageGramsPerWeek(average);
-    await updateAverageInDatabase(average);
+    const gramsToday = gramsData.filter((gram) => {
+      const dateParts = gram.date.split(" - ")[0].split("/");
+      const month = parseInt(dateParts[0]) - 1; // Month (0-based)
+      const day = parseInt(dateParts[1]);
+      const year = parseInt(dateParts[2]);
+  
+      const entryDate = new Date(year, month, day);
+  
+      const today = new Date();
+      const todayDate = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+  
+      return entryDate.getFullYear() === todayDate.getFullYear() &&
+             entryDate.getMonth() === todayDate.getMonth() &&
+             entryDate.getDate() === todayDate.getDate();
+    });
+
+    const totalGramsToday = gramsToday.reduce((sum, entry) => sum + entry.value, 0);
+    const dailyAverage = gramsToday.length > 0 ? totalGramsToday / gramsToday.length : 0;
+    setDailyAverage(dailyAverage);
+
+    const gramsPerWeek: Record<string, { total: number; count: number; startDate: Date; endDate: Date }> = {};
+  
+    gramsData.forEach(entry => {
+      const dateParts = entry.date.split(" - ")[0].split("/");
+      const month = parseInt(dateParts[0]) - 1;
+      const day = parseInt(dateParts[1]);
+      const year = parseInt(dateParts[2]);
+      
+      const date = new Date(year, month, day);
+  
+      if (isNaN(date.getTime())) {
+        console.error(`Invalid date for entry: ${entry.date}`);
+        return;
+      }
+      
+      const weekNumber = getWeekNumber(date);
+      const weekKey = `${date.getFullYear()}-W${weekNumber}`;
+
+      console.log(weekKey);
+  
+      if (!gramsPerWeek[weekKey]) {
+        gramsPerWeek[weekKey] = { total: 0, count: 0, startDate: date, endDate: date };
+      }
+  
+      gramsPerWeek[weekKey].total += entry.value;
+      gramsPerWeek[weekKey].count += 1;
+  
+      if (date < gramsPerWeek[weekKey].startDate) {
+        gramsPerWeek[weekKey].startDate = date;
+      }
+      if (date > gramsPerWeek[weekKey].endDate) {
+        gramsPerWeek[weekKey].endDate = date;
+      }
+    });
+  
+    const weeklyAverages = Object.entries(gramsPerWeek).map(([key, week]) => {
+      const average = week.total / (week.count || 1);
+      const startDate = week.startDate.toLocaleDateString('en-US', { month: 'numeric', day: 'numeric', year: 'numeric' });
+      const endDate = week.endDate.toLocaleDateString('en-US', { month: 'numeric', day: 'numeric', year: 'numeric' });
+      
+      return `${startDate} - ${endDate}: ${average.toFixed(2)}gr`;
+  });
+  
+    setWeeklyAverages(weeklyAverages);
+    // await updateAverageInDatabase(overallAverage);
   };
 
-  const updateAverageInDatabase = async (average: number) => {
-    await firebaseDatabase.ref("/feedingData/dailyAverage").set(average);
+  const getWeekNumber = (date: Date) => {
+    const startOfYear = new Date(date.getFullYear(), 0, 1);
+    const days = Math.floor((date.getTime() - startOfYear.getTime()) / (24 * 60 * 60 * 1000));
+    return Math.ceil((days + startOfYear.getDay() + 1) / 7);
   };
+
+  // const updateAverageInDatabase = async (average: number) => {
+  //   await firebaseDatabase.ref("/feedingData/dailyAverage").set(average);
+  // };
 
   return (
     <ThemedView style={{ flex: 1 }}>
@@ -96,7 +164,7 @@ export default function Analytics() {
                 <ThemedText style={styles.dataText}>
                   Average Fed per Day:{" "}
                   <ThemedText style={styles.dataNumber}>
-                    {averageGramsPerWeek.toFixed(2)}gr
+                    {dailyAverage.toFixed(2)}gr
                   </ThemedText>
                 </ThemedText>
                 <View style={styles.dataEntries}>
@@ -121,11 +189,21 @@ export default function Analytics() {
           ) : (
             <View style={styles.card}>
               <ThemedText style={styles.dataText}>
-                Daily Average:{" "}
-                <ThemedText style={styles.dataNumber}>
-                  {averageGramsPerWeek.toFixed(2)}gr
-                </ThemedText>
+                Weekly Averages:
               </ThemedText>
+              {weeklyAverages.length > 0 ? (
+                weeklyAverages.map((weekData, index) => (
+                  <View key={weekData} style={styles.dataEntry}>
+                    <ThemedText key={index} style={{ color: "#000" }}>
+                      {weekData}
+                    </ThemedText>
+                  </View>
+                ))
+              ) : (
+                <ThemedText style={styles.dataText}>
+                  No data available for this week.
+                </ThemedText>
+              )}
             </View>
           )}
 

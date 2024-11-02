@@ -139,27 +139,27 @@ export default function ManualFeeding() {
       const dispenseRef = firebaseDatabase.ref("/commands/dispense");
       await dispenseRef.set(true);
 
-      const now = new Date();
+      // const now = new Date();
 
-      const formattedDate = `${(now.getMonth() + 1)
-        .toString()
-        .padStart(2, "0")}/${now
-        .getDate()
-        .toString()
-        .padStart(2, "0")}/${now.getFullYear()} - ${now
-        .getHours()
-        .toString()
-        .padStart(2, "0")}:${now.getMinutes().toString().padStart(2, "0")}`;
+      // const formattedDate = `${(now.getMonth() + 1)
+      //   .toString()
+      //   .padStart(2, "0")}/${now
+      //   .getDate()
+      //   .toString()
+      //   .padStart(2, "0")}/${now.getFullYear()} - ${now
+      //   .getHours()
+      //   .toString()
+      //   .padStart(2, "0")}:${now.getMinutes().toString().padStart(2, "0")}`;
 
-      const newDailyGram: DailyGrams = {
-        feedTimeId: uuid.v4(),
-        date: formattedDate,
-        value: 150,
-      };
+      // const newDailyGram: DailyGrams = {
+      //   feedTimeId: uuid.v4(),
+      //   date: formattedDate,
+      //   value: 30,
+      // };
 
-      await firebaseDatabase
-        .ref(`/feedingData/dailyGrams/${newDailyGram.feedTimeId}`)
-        .set(newDailyGram);
+      // await firebaseDatabase
+      //   .ref(`/feedingData/dailyGrams/${newDailyGram.feedTimeId}`)
+      //   .set(newDailyGram);
 
       setFeedback({ message: "Successfully dispensed food", type: "success" });
     } catch (error) {
