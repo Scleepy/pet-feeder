@@ -94,8 +94,6 @@ export default function Analytics() {
       
       const weekNumber = getWeekNumber(date);
       const weekKey = `${date.getFullYear()}-W${weekNumber}`;
-
-      console.log(weekKey);
   
       if (!gramsPerWeek[weekKey]) {
         gramsPerWeek[weekKey] = { total: 0, count: 0, startDate: date, endDate: date };
