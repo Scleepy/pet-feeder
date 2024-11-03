@@ -4,8 +4,8 @@ import {
   StyleSheet,
   Switch,
   Text,
+  TextInput,
   TouchableOpacity,
-  TouchableWithoutFeedback,
   View,
 } from "react-native";
 import ParallaxScrollView from "@/components/ParallaxScrollView";
@@ -39,6 +39,7 @@ export default function FeedingTime() {
     message: "",
     type: "success",
   });
+  const [grams, setGrams] = useState<string>("30");
 
   useEffect(() => {
     const fetchFeedTimes = async () => {
@@ -57,7 +58,19 @@ export default function FeedingTime() {
       );
     };
 
+    const fetchScheduleFeedingAmount = async () => {
+      const snapshot = await firebaseDatabase.ref("/commands/scheduleFeedingValue").once("value");
+      const data = snapshot.val();
+      
+      if (data !== null && typeof data === 'string') {
+        setGrams(data);
+      } else if (data !== null) {
+        setGrams(String(data));
+      }
+    };
+
     fetchFeedTimes();
+    fetchScheduleFeedingAmount();
   }, []);
 
   const handleConfirm = (selectedDate: Date) => {
@@ -168,6 +181,24 @@ export default function FeedingTime() {
     setFeedback({ message: "", type: "success" });
   };
 
+  const setAmount = () => {
+    try {
+      const gramsValue = parseInt(grams);
+
+      if (gramsValue < 10) {
+        setFeedback({ message: "Cannot dispense less than\n10 grams of food", type: "failure" });
+        return; 
+      }
+  
+      firebaseDatabase.ref("/commands/scheduleFeedingValue").set(gramsValue);
+      setFeedback({ message: "Successfully set amount", type: "success" });
+    } catch (error){
+      console.log(error);
+      setFeedback({ message: "Failed to set amount", type: "failure" });
+      return;
+    }
+  }
+
   return (
     <ThemedView style={{ flex: 1 }}>
       <ParallaxScrollView
@@ -186,7 +217,22 @@ export default function FeedingTime() {
             🐱
           </ThemedText>
         </ThemedView>
-
+        <ThemedView style={styles.inputContainer}>
+          <ThemedText style={styles.dispenseText}>Dispense value</ThemedText>
+          <View style={styles.row}>
+            <TextInput
+              style={styles.input}
+              placeholderTextColor="lightgray"
+              placeholder="Enter grams of food"
+              keyboardType="numeric"
+              value={grams}
+              onChangeText={setGrams}
+            />
+            <TouchableOpacity style={styles.button} onPress={setAmount}>
+              <ThemedText type="default">Set Amount</ThemedText>
+            </TouchableOpacity>
+          </View>
+        </ThemedView>
         {feedTimes.map((feedTime, index) => (
           <TouchableOpacity
             key={index}
@@ -318,5 +364,38 @@ const styles = StyleSheet.create({
   },
   rfidOff: {
     backgroundColor: "#F44336",
+  },
+  inputContainer: {
+    marginVertical: 20,
+    alignItems: "center",
+  },
+  row: {
+    flexDirection: "row",
+    alignItems: "center",
+    width: "100%",
+  },
+  input: {
+    height: 43,
+    borderColor: "white",
+    borderWidth: 1,
+    paddingHorizontal: 10,
+    borderRadius: 5,
+    flex: 1,
+    color: "white",
+    backgroundColor: "#2E2E2E",
+    marginRight: 10,
+  },
+  button: {
+    backgroundColor: "#4CAF50",
+    paddingVertical: 10,
+    paddingHorizontal: 15,
+    borderRadius: 5,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  dispenseText: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    marginBottom: 8,
   },
 });

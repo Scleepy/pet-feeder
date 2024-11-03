@@ -4,10 +4,8 @@ import {
   StyleSheet,
   Platform,
   Alert,
-  Text,
   TouchableOpacity,
   View,
-  Animated,
   TextInput,
 } from "react-native";
 import messaging from "@react-native-firebase/messaging";
@@ -19,12 +17,6 @@ import { ThemedText } from "@/components/ThemedText";
 import { ThemedView } from "@/components/ThemedView";
 import { FeedbackMessage } from "@/components/FeedbackMessage";
 import uuid from "react-native-uuid";
-
-interface DailyGrams {
-  feedTimeId: string | number[];
-  date: string;
-  value: number;
-}
 
 interface PetFeedingHistory {
   petFeedingHistoryId: string | number[];
@@ -58,6 +50,18 @@ export default function ManualFeeding() {
       }
     };
 
+    const fetchScheduleFeedingAmount = async () => {
+      const snapshot = await firebaseDatabase.ref("/commands/manualFeedingValue").once("value");
+      const data = snapshot.val();
+      
+      if (data !== null && typeof data === 'string') {
+        setGrams(data);
+      } else if (data !== null) {
+        setGrams(String(data));
+      }
+    };
+
+    fetchScheduleFeedingAmount();
     setExistingToken();
   }, []);
 
@@ -138,18 +142,8 @@ export default function ManualFeeding() {
 
   const dispenseFood = async () => {
     try {
-      const gramsValue = parseInt(grams);
-
-      if (gramsValue <= 10) {
-        setFeedback({ message: "Cannot dispense less than\n10 grams of food", type: "failure" });
-        return; 
-      }
-
       firebaseDatabase.ref("/commands/dispense").set(true);
-      firebaseDatabase.ref("/commands/manualFeedingValue").set(gramsValue);
-
       setFeedback({ message: "Successfully dispensed food", type: "success" });
-      setGrams("30");
     } catch (error) {
       console.error("Error dispensing food:", error);
       setFeedback({ message: "Failed to dispense food", type: "failure" });
@@ -199,6 +193,24 @@ export default function ManualFeeding() {
     }
   };
 
+  const setAmount = () => {
+    try {
+      const gramsValue = parseInt(grams);
+
+      if (gramsValue < 10) {
+        setFeedback({ message: "Cannot dispense less than\n10 grams of food", type: "failure" });
+        return; 
+      }
+  
+      firebaseDatabase.ref("/commands/manualFeedingValue").set(gramsValue);
+      setFeedback({ message: "Successfully set amount", type: "success" });
+    } catch (error){
+      console.log(error);
+      setFeedback({ message: "Failed to set amount", type: "failure" });
+      return;
+    }
+  }
+
   return (
     <ParallaxScrollView
       headerBackgroundColor={{ light: "#A1CEDC", dark: "#1D3D47" }}
@@ -215,14 +227,20 @@ export default function ManualFeeding() {
       </ThemedView>
 
       <ThemedView style={styles.inputContainer}>
-        <TextInput
-          style={styles.input}
-          placeholderTextColor="lightgray"
-          placeholder="Enter grams of food"
-          keyboardType="numeric"
-          value={grams}
-          onChangeText={setGrams}
-        />
+        <ThemedText style={styles.dispenseText}>Dispense value</ThemedText>
+        <View style={styles.row}>
+          <TextInput
+            style={styles.input}
+            placeholderTextColor="lightgray"
+            placeholder="Enter grams of food"
+            keyboardType="numeric"
+            value={grams}
+            onChangeText={setGrams}
+          />
+          <TouchableOpacity style={styles.setButton} onPress={setAmount}>
+            <ThemedText type="default">Set Amount</ThemedText>
+          </TouchableOpacity>
+        </View>
       </ThemedView>
 
       <ThemedView style={styles.buttonContainer}>
@@ -237,12 +255,12 @@ export default function ManualFeeding() {
         </TouchableOpacity>
       </ThemedView>
 
-      <ThemedView style={styles.tokenContainer}>
+      {/* <ThemedView style={styles.tokenContainer}>
         <ThemedText type="subtitle">Currently dispensing {grams} grams of food.</ThemedText>
-        {/* <Text style={styles.tokenText}>
+        <Text style={styles.tokenText}>
           {fcmToken ? fcmToken : "Fetching FCM token..."}
-        </Text> */}
-      </ThemedView>
+        </Text>
+      </ThemedView> */}
 
       <ThemedView style={styles.buttonContainer}>
         <TouchableOpacity style={styles.buttonReset} onPress={resetManualFeedingValues}>
@@ -272,17 +290,18 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   input: {
-    height: 40,
+    height: 43,
     borderColor: "white",
     borderWidth: 1,
     paddingHorizontal: 10,
     borderRadius: 5,
-    width: "80%",
+    flex: 1,
     color: "white",
     backgroundColor: "#2E2E2E",
+    marginRight: 10,
   },
   buttonContainer: {
-    marginVertical: 20,
+    marginVertical: 5,
     alignItems: "center",
   },
   button: {
@@ -311,4 +330,22 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontFamily: "monospace",
   },
+  dispenseText: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    marginBottom: 8,
+  },
+  row: {
+    flexDirection: "row",
+    alignItems: "center",
+    width: "100%",
+  },
+  setButton: {
+    backgroundColor: "#4CAF50",
+    paddingVertical: 10,
+    paddingHorizontal: 15,
+    borderRadius: 5,
+    justifyContent: "center",
+    alignItems: "center",
+  }
 });
