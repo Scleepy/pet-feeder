@@ -160,7 +160,7 @@ const RFIDIdentification = () => {
                 ) : (
                   <>
                     <ThemedText style={styles.cardTitle}>
-                      {pet?.petName}
+                      {pet?.petName} ({pet?.dispenseAmount}gr)
                     </ThemedText>
                     <Text
                       style={styles.cardText}
