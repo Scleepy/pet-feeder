@@ -160,12 +160,24 @@ export default function ManualFeeding() {
     setFeedback({ message: "", type: "success" });
   };
 
+  const resetManualFeedingValues = () => {
+    try {
+      firebaseDatabase.ref("/commands/dispense").set(false);
+      firebaseDatabase.ref("/commands/manualFeedingValue").set(30);
+      firebaseDatabase.ref("/commands/activeRFIDFeedingId").set("");
+
+      setFeedback({ message: "Manual feeding values reset", type: "success" });
+    } catch (error) {
+      console.error("Error resetting manual feeding values:", error);
+      setFeedback({ message: "Failed to reset manual feeding values", type: "failure" });
+    }
+  }
+
   const rfidDispenseFood = async () => {
     try {
       const activeRFIDFeedingId = uuid.v4();
 
-      const dispenseRef = firebaseDatabase.ref("/commands/activeRFIDFeedingId");
-      await dispenseRef.set(activeRFIDFeedingId);
+      await firebaseDatabase.ref("/commands/activeRFIDFeedingId").set(activeRFIDFeedingId);
 
       const newPetFeedingHistoryData: PetFeedingHistory = {
         petFeedingHistoryId: activeRFIDFeedingId,
@@ -226,10 +238,16 @@ export default function ManualFeeding() {
       </ThemedView>
 
       <ThemedView style={styles.tokenContainer}>
-        <ThemedText type="subtitle">FCM Token:</ThemedText>
-        <Text style={styles.tokenText}>
+        <ThemedText type="subtitle">Currently dispensing {grams} grams of food.</ThemedText>
+        {/* <Text style={styles.tokenText}>
           {fcmToken ? fcmToken : "Fetching FCM token..."}
-        </Text>
+        </Text> */}
+      </ThemedView>
+
+      <ThemedView style={styles.buttonContainer}>
+        <TouchableOpacity style={styles.buttonReset} onPress={resetManualFeedingValues}>
+          <ThemedText type="default">Reset Manual Feeding Values</ThemedText>
+        </TouchableOpacity>
       </ThemedView>
 
       {feedback.message !== "" && (
@@ -269,6 +287,11 @@ const styles = StyleSheet.create({
   },
   button: {
     backgroundColor: "#4CAF50",
+    padding: 15,
+    borderRadius: 5,
+  },
+  buttonReset: {
+    backgroundColor: "#1E90FF",
     padding: 15,
     borderRadius: 5,
   },

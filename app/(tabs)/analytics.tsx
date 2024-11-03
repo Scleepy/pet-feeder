@@ -170,6 +170,8 @@ export default function Analytics() {
   //   await firebaseDatabase.ref("/feedingData/dailyAverage").set(average);
   // };
 
+  const foodLevelNumber = parseInt(currentFoodLevel.replace('%', ''), 10);
+
   return (
     <ThemedView style={{ flex: 1 }}>
       <ParallaxScrollView
@@ -190,7 +192,12 @@ export default function Analytics() {
         </ThemedView>
 
         <ScrollView contentContainerStyle={styles.scrollContainer}>
-          <ThemedText style={styles.sectionTitle}>
+          <ThemedText
+            style={[
+              styles.sectionTitle,
+              foodLevelNumber <= 30 && styles.warningText,
+            ]}
+          >
             Current Food Level: {currentFoodLevel}
           </ThemedText>
 
@@ -341,5 +348,9 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.8,
     shadowRadius: 2,
+  },
+  warningText: {
+    color: 'red',
+    fontWeight: 'bold',
   },
 });
