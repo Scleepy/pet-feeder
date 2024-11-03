@@ -157,7 +157,6 @@ export default function ManualFeeding() {
   const resetManualFeedingValues = () => {
     try {
       firebaseDatabase.ref("/commands/dispense").set(false);
-      firebaseDatabase.ref("/commands/manualFeedingValue").set(30);
       firebaseDatabase.ref("/commands/activeRFIDFeedingId").set("");
 
       setFeedback({ message: "Manual feeding values reset", type: "success" });
